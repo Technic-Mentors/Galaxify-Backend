@@ -5,6 +5,7 @@ const multer = require("multer");
 const cloudinary = require("../Cloudinary");
 const bcrypt = require("bcrypt");
 const User = require("../Schema/User");
+const Admin = require("../Schema/Admin")
 const products = require("../Schema/products");
 const Category = require("../Schema/Category")
 const Order = require("../Schema/Orders")
@@ -32,14 +33,15 @@ const upload = multer({
 
 const createAdmin = async () => {
     const adminName = "E-commerce admin"
-    const adminEmail = "ecommerceadmin@gmail.com"
+    const adminEmail = "almahdia@gmail.com"
     const adminPassword = "1234"
-    const checkEmail = await User.findOne({ email: adminEmail })
+    const checkEmail = await Admin.findOne({ email: adminEmail }).maxTimeMS(0)
+
     if (checkEmail) {
         return;
     }
     const hashPassword = await bcrypt.hash(adminPassword, 10)
-    const adminData = await User.create({
+    const adminData = await Admin.create({
         name: adminName,
         email: adminEmail,
         password: hashPassword,
@@ -49,15 +51,38 @@ const createAdmin = async () => {
 }
 createAdmin()
 
+router.post("/adminSignIn", async (req, res) => {
+    try {
+        const { email, password } = req.body
+        const checkEmail = await Admin.findOne({ email }).maxTimeMS(0)
+
+        if (!checkEmail) {
+            return res.status(400).json({ message: "Invalid Credentials" })
+        }
+
+        const checkPassword = await bcrypt.compare(password, checkEmail.password)
+        if (!checkPassword) {
+            return res.status(400).json({ message: "Invalid Credentials" })
+        }
+
+        res.json(checkEmail)
+    } catch (error) {
+        console.log(error)
+        res.status(500).send("internal server error occured")
+    }
+})
+
 router.post("/signUp", async (req, res) => {
     try {
-        const { name, email, number, password, confirmPassword } = req.body
-        const checkEmail = await User.findOne({ email })
+        const { name, email, number, password, confirmPassword, role } = req.body
+        const checkEmail = await User.findOne({ email }).maxTimeMS(0)
+
         if (checkEmail) {
             return res.status(400).json({ message: "user with this email already exists" })
         }
 
-        const checkNumber = await User.findOne({ number })
+        const checkNumber = await User.findOne({ number }).maxTimeMS(0)
+
         if (checkNumber) {
             return res.status(400).json({ message: "This number already used" })
         }
@@ -71,7 +96,7 @@ router.post("/signUp", async (req, res) => {
             email,
             password: hashPassword,
             number,
-            role: "shopManager"
+            role,
         })
         res.json(newUser)
     } catch (error) {
@@ -83,7 +108,8 @@ router.post("/signUp", async (req, res) => {
 router.post("/signIn", async (req, res) => {
     try {
         const { email, password } = req.body
-        const checkEmail = await User.findOne({ email })
+        const checkEmail = await User.findOne({ email }).maxTimeMS(0)
+
         if (!checkEmail) {
             return res.status(400).json({ message: "Not found any user with this email" })
         }
@@ -110,9 +136,23 @@ router.get("/allUsers", async (req, res) => {
     }
 })
 
-router.get("/idUser/:id", async (req, res) => {
+router.get("/User/:id", async (req, res) => {
     try {
-        const checkUser = await User.findOne(req.params.id)
+        const checkUser = await User.findOne(req.params.id).maxTimeMS(0)
+
+        if (!checkUser) {
+            return res.send(400).json({ message: "User with this id not found" })
+        }
+        res.json(checkUser)
+    } catch (error) {
+        console.log(error)
+        res.status(500).send("internal server error occured")
+    }
+})
+router.get("/signUser/:id", async (req, res) => {
+    try {
+        const checkUser = await User.findOne({ _id: req.params.id }).maxTimeMS(0)
+
         if (!checkUser) {
             return res.send(400).json({ message: "User with this id not found" })
         }
@@ -124,8 +164,9 @@ router.get("/idUser/:id", async (req, res) => {
 })
 router.put("/UpdateUser/:id", async (req, res) => {
     try {
-        const { name, email, number, password } = req.body
-        const checkUser = await User.findOne(req.params.id)
+        const { name, email, number, password, role } = req.body
+        const checkUser = await User.findOne({ _id: req.params.id }).maxTimeMS(0)
+
         if (!checkUser) {
             return res.send(400).json({ message: "User with this id not found" })
         }
@@ -140,7 +181,11 @@ router.put("/UpdateUser/:id", async (req, res) => {
             newUser.number = number
         }
         if (password) {
-            newUser.password = password
+            const hashPassword = await bcrypt.hash(password, 10)
+            newUser.password = hashPassword
+        }
+        if (role) {
+            newUser.role = role
         }
 
         const updateUser = await User.findByIdAndUpdate(req.params.id, { $set: newUser }, { new: true })
@@ -167,7 +212,8 @@ router.delete("/userDelete/:id", async (req, res) => {
 router.post("/addCategory", async (req, res) => {
     try {
         const { category } = req.body
-        const checkCategory = await Category.findOne({ category })
+        const checkCategory = await Category.findOne({ category }).maxTimeMS(0)
+
         if (checkCategory) {
             return res.status(400).json({ message: "Category already exists" })
         }
@@ -187,6 +233,39 @@ router.get("/allCategories", async (req, res) => {
         res.status(500).send("internal server error occured")
     }
 })
+router.get("/getCat/:id", async (req, res) => {
+    try {
+
+        const getCat = await Category.findById(req.params.id)
+        if (!getCat) {
+            return res.status(400).json({ message: "Category not found against this id" })
+        }
+        res.json(getCat)
+    } catch (error) {
+        console.log(error)
+        res.status(500).send("internal server error occured")
+    }
+})
+router.put("/updateCat/:id", async (req, res) => {
+    try {
+        const { category } = req.body
+        const newCate = {}
+
+        if (category) {
+            newCate.category = category
+        }
+
+        let checkCat = await Category.findById(req.params.id)
+        if (!checkCat) {
+            return res.status(400).json({ message: "Category not found against this id" })
+        }
+        checkCat = await Category.findByIdAndUpdate(req.params.id, { $set: newCate }, { new: true })
+        res.json(checkCat)
+    } catch (error) {
+        console.log(error)
+        res.status(500).send("internal server error occured")
+    }
+})
 router.delete("/delcat/:id", async (req, res) => {
     try {
         const cat = await Category.findByIdAndDelete(req.params.id)
@@ -201,8 +280,9 @@ router.delete("/delcat/:id", async (req, res) => {
 })
 router.post("/addProducts", upload.single("image"), async (req, res) => {
     try {
-        const { title, price, description, categoryId } = req.body
-        const checkTitle = await Products.findOne({ title })
+        const { title, price, description, categoryId, userId } = req.body
+        const checkTitle = await Products.findOne({ title }).maxTimeMS(0)
+
         if (checkTitle) {
             return res.status(400).json({ message: "Title already used" })
         }
@@ -214,6 +294,7 @@ router.post("/addProducts", upload.single("image"), async (req, res) => {
         const newProduct = await Products.create({
             title,
             categoryId,
+            userId,
             description,
             image: img_url,
             price
@@ -227,7 +308,7 @@ router.post("/addProducts", upload.single("image"), async (req, res) => {
 
 router.get("/allProducts", async (req, res) => {
     try {
-        const allProducts = await products.find().populate("categoryId", "category")
+        const allProducts = await products.find().populate("categoryId", "category").populate("userId", "email")
         res.json(allProducts)
     } catch (error) {
         console.log(error)
@@ -281,7 +362,8 @@ router.put("/updateProdct/:id", upload.single("image"), async (req, res) => {
 
 router.get("/getProduct/:title", async (req, res) => {
     try {
-        const titleProduct = await Products.findOne({ title: req.params.title })
+        const titleProduct = await Products.findOne({ title: req.params.title }).maxTimeMS(0)
+
             .populate("categoryId", "category")
         res.json(titleProduct)
     } catch (error) {
@@ -365,6 +447,54 @@ router.get("/orderDetail/:orderId", async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
         res.json(order)
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal server error occurred");
+    }
+})
+router.get("/orders/:id", async (req, res) => {
+    try {
+        const order = await orderDetail.find({ orderId: req.params.id })
+            .populate("orderId", "name email address date orderNumber addInformation orderAmount orderStatus")
+            .populate("productId", "title price image description subTotal")
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+        res.json(order)
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal server error occurred");
+    }
+})
+router.get("/editOrder/:id", async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id)
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+        res.json(order)
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal server error occurred");
+    }
+})
+router.put("/updateOrder/:id", async (req, res) => {
+    try {
+        const { orderStatus } = req.body
+        const order = await Order.findByIdAndUpdate(req.params.id, { orderStatus }, { new: true })
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+        res.json(order)
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal server error occurred");
+    }
+})
+router.get("/allOrders", async (req, res) => {
+    try {
+        const allOrders = await Order.find()
+        res.json(allOrders)
     } catch (error) {
         console.error(error);
         res.status(500).send("Internal server error occurred");

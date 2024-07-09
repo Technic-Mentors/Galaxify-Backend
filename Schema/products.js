@@ -11,6 +11,11 @@ const productSchema = new Schema({
         ref: "Category",
         required: true
     },
+    userId:{
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     description: {
         type: String,
     },
@@ -27,7 +32,12 @@ const productSchema = new Schema({
     image: {
         type: String,
         // required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
+
 })
 
 module.exports = mongoose.model("Products", productSchema)
