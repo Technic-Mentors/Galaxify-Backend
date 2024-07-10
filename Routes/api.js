@@ -399,7 +399,8 @@ router.post("/placeOrder", async (req, res) => {
             email,
             addInformation,
             orderAmount,
-            cartProducts // New field in the request body to handle cart products
+            cartProducts,
+            orderStatus
         } = req.body;
 
         const orderNumber = generatOrderNumber()
@@ -415,7 +416,7 @@ router.post("/placeOrder", async (req, res) => {
             addInformation,
             orderAmount,
             orderNumber,
-            orderStatus: "Pending"
+            orderStatus
         });
 
         // Map over each product in the cartProducts array and create orderDetail documents
