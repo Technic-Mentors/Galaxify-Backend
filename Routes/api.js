@@ -35,13 +35,13 @@ const createAdmin = async () => {
     const adminName = "E-commerce admin"
     const adminEmail = "almahdia@gmail.com"
     const adminPassword = "1234"
-    const checkEmail = await Admin.findOne({ email: adminEmail }).maxTimeMS(0)
+    const checkEmail = await User.findOne({ email: adminEmail }).maxTimeMS(0)
 
     if (checkEmail) {
         return;
     }
     const hashPassword = await bcrypt.hash(adminPassword, 10)
-    const adminData = await Admin.create({
+    const adminData = await User.create({
         name: adminName,
         email: adminEmail,
         password: hashPassword,
@@ -50,27 +50,6 @@ const createAdmin = async () => {
     console.log("admin created", adminData)
 }
 createAdmin()
-
-router.post("/adminSignIn", async (req, res) => {
-    try {
-        const { email, password } = req.body
-        const checkEmail = await Admin.findOne({ email }).maxTimeMS(0)
-
-        if (!checkEmail) {
-            return res.status(400).json({ message: "Invalid Credentials" })
-        }
-
-        const checkPassword = await bcrypt.compare(password, checkEmail.password)
-        if (!checkPassword) {
-            return res.status(400).json({ message: "Invalid Credentials" })
-        }
-
-        res.json(checkEmail)
-    } catch (error) {
-        console.log(error)
-        res.status(500).send("internal server error occured")
-    }
-})
 
 router.post("/signUp", async (req, res) => {
     try {
