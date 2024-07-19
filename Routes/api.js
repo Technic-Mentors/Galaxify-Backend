@@ -33,7 +33,7 @@ const upload = multer({
 
 const createAdmin = async () => {
     const adminName = "E-commerce admin"
-    const adminEmail = "almahdia@gmail.com"
+    const adminEmail = "adil@abdullahkneaders.com"
     const adminPassword = "1234"
     const checkEmail = await User.findOne({ email: adminEmail }).maxTimeMS(0)
 
@@ -475,6 +475,18 @@ router.get("/allOrders", async (req, res) => {
     try {
         const allOrders = await Order.find()
         res.json(allOrders)
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal server error occurred");
+    }
+})
+router.get("/orderByNumber/:orderNumber", async (req, res) => {
+    try {
+        const orderNumber = await Order.findOne({ orderNumber: req.params.orderNumber })
+        if (!orderNumber) {
+            return res.status(400).json({ message: "order not found" })
+        }
+        res.json(orderNumber)
     } catch (error) {
         console.error(error);
         res.status(500).send("Internal server error occurred");
