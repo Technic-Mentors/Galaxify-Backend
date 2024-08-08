@@ -11,7 +11,7 @@ const productSchema = new Schema({
         ref: "Category",
         required: true
     },
-    userId:{
+    userId: {
         type: Schema.Types.ObjectId,
         ref: "User",
         required: true
@@ -29,10 +29,9 @@ const productSchema = new Schema({
     status: {
         type: String
     },
-    image: {
-        type: String,
-        // required: true
-    },
+    images: [{
+        type: String
+    }],
     createdAt: {
         type: Date,
         default: Date.now

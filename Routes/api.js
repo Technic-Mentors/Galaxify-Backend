@@ -9,6 +9,7 @@ const Admin = require("../Schema/Admin")
 const products = require("../Schema/products");
 const Category = require("../Schema/Category")
 const Order = require("../Schema/Orders")
+const Review = require("../Schema/Review")
 const orderDetail = require("../Schema/OrderDetail")
 // img storage path
 const imgconfig = multer.diskStorage({
@@ -257,7 +258,7 @@ router.delete("/delcat/:id", async (req, res) => {
         res.status(500).send("internal server error occured")
     }
 })
-router.post("/addProducts", upload.single("image"), async (req, res) => {
+router.post("/addProducts", upload.array("images", 5), async (req, res) => {
     try {
         const { title, price, description, categoryId, userId } = req.body
         const checkTitle = await Products.findOne({ title }).maxTimeMS(0)
@@ -265,17 +266,19 @@ router.post("/addProducts", upload.single("image"), async (req, res) => {
         if (checkTitle) {
             return res.status(400).json({ message: "Title already used" })
         }
-        let img_url;
-        if (req.file) {
-            const upload = await cloudinary.uploader.upload(req.file.path);
-            img_url = upload.secure_url
+        let imgs_url = [];
+        if (req.files) {
+            for (let file of req.files) {
+                const upload = await cloudinary.uploader.upload(file.path);
+                imgs_url.push(upload.secure_url)
+            }
         }
         const newProduct = await Products.create({
             title,
             categoryId,
             userId,
             description,
-            image: img_url,
+            images: imgs_url,
             price
         })
         res.json(newProduct)
@@ -310,10 +313,11 @@ router.put("/updateProdct/:id", upload.single("image"), async (req, res) => {
         const { title, price, description, categoryId } = req.body
         const newProduct = {}
 
-        if (req.file) {
-            const upload = await cloudinary.uploader.upload(req.file.path);
+        if (req.files) {
+            const upload = await cloudinary.uploader.upload(file.path);
             newProduct.image = upload.secure_url
         }
+
         if (title) {
             newProduct.title = title
         }
@@ -490,6 +494,38 @@ router.get("/orderByNumber/:orderNumber", async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).send("Internal server error occurred");
+    }
+})
+
+// review apis
+router.post("/addReview", async (req, res) => {
+    try {
+        const { name, email, review, rating, productId } = req.body
+        const addNewReview = await Review.create({
+            name,
+            email,
+            review,
+            rating,
+            productId
+        })
+        res.json(addNewReview)
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("internal server error occured")
+
+    }
+})
+router.get("/getReview", async (req, res) => {
+    try {
+        const allReviews = await Review.find().populate("productId", "title")
+        if (!allReviews) {
+            return res.status(400).json({ message: "not found any review yet" })
+        }
+        res.json(allReviews)
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("internal server error occured")
+
     }
 })
 
