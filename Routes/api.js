@@ -33,8 +33,8 @@ const upload = multer({
 })
 
 const createAdmin = async () => {
-    const adminName = "E-commerce admin"
-    const adminEmail = "adil@abdullahkneaders.com"
+    const adminName = "Galaxify admin"
+    const adminEmail = "galaxifymart@gmail.com"
     const adminPassword = "1234"
     const checkEmail = await User.findOne({ email: adminEmail }).maxTimeMS(0)
 
