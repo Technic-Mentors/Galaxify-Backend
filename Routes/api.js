@@ -266,6 +266,7 @@ router.post("/addProducts", upload.array("images", 5), async (req, res) => {
         if (checkTitle) {
             return res.status(400).json({ message: "Title already used" })
         }
+
         let imgs_url = [];
         if (req.files) {
             for (let file of req.files) {
@@ -308,15 +309,32 @@ router.get("/getProdct/:id", async (req, res) => {
         res.status(500).send("internal server error occured")
     }
 })
-router.put("/updateProdct/:id", upload.single("image"), async (req, res) => {
+router.put("/updateProdct/:id", upload.array("images", 5), async (req, res) => {
     try {
-        const { title, price, description, categoryId } = req.body
+        const { title, price, description, categoryId, imageIndex } = req.body
         const newProduct = {}
 
-        if (req.files) {
-            const upload = await cloudinary.uploader.upload(file.path);
-            newProduct.image = upload.secure_url
+        let checkProduct = await Products.findById(req.params.id)
+        if (!checkProduct) {
+            return res.status(400).json({ message: "product not found against this id" })
         }
+
+        let parsedImageIndex = [];
+        if (imageIndex) {
+            parsedImageIndex = JSON.parse(imageIndex);
+        }
+
+        if (req.files && req.files.length > 0) {
+            for (let i = 0; i < req.files.length; i++) {
+                const upload = await cloudinary.uploader.upload(req.files[i].path);
+                if (parsedImageIndex[i] !== undefined) {
+                    checkProduct.images[parsedImageIndex[i]] = upload.secure_url;
+                } else {
+                    checkProduct.images.push(upload.secure_url);
+                }
+            }
+        }
+
 
         if (title) {
             newProduct.title = title
@@ -331,11 +349,13 @@ router.put("/updateProdct/:id", upload.single("image"), async (req, res) => {
             newProduct.categoryId = categoryId
         }
 
-        let checkProduct = await Products.findById(req.params.id)
-        if (!checkProduct) {
-            return res.status(400).json({ message: "product not found against this id" })
-        }
-        checkProduct = await Products.findByIdAndUpdate(req.params.id, { $set: newProduct }, { new: true })
+        checkProduct = await Products.findByIdAndUpdate(req.params.id, {
+            $set: {
+                ...newProduct,
+                images: checkProduct.images
+            }
+        }, { new: true });
+
         res.json(checkProduct)
     } catch (error) {
         console.log(error)
